@@ -1,4 +1,6 @@
 """A simple command-line calculator."""
+def subtract(a, b):
+    return a - b
 
 
 def calculate(left, operator, right):
