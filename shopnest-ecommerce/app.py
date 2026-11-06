@@ -23,6 +23,10 @@ SEED_PRODUCTS = [
     ("p6", "Botanical Skincare Set", "Beauty", 1599, 1999, 4.7, 92, "🧴", "#e3f0e3", "GENTLE CARE", "A simple three-step plant-based routine: cleanse, hydrate and restore.", 30),
     ("p7", "Pour-Over Coffee Starter Kit", "Home", 1299, 1699, 4.6, 67, "☕", "#f1dfd1", "GIFT PICK", "Everything you need for a slow, delicious morning ritual, in one tidy kit.", 17),
     ("p8", "Pocket Bluetooth Speaker", "Electronics", 1999, 2599, 4.4, 119, "🔊", "#e1e6f2", "COMPACT", "Big, clear sound in a pocket-friendly, splash-resistant little package.", 22),
+    ("p9", "Daylight Organic Cotton T-Shirt", "Clothes", 899, 1199, 4.8, 74, "👕", "#e7e8ef", "EVERYDAY FAVOURITE", "A soft, breathable organic cotton tee with an easy fit for everyday wear.", 36),
+    ("p10", "Weekend Linen Blend Shirt", "Clothes", 1699, 2199, 4.7, 58, "👔", "#e9e1d2", "WEEKEND EDIT", "A relaxed linen-blend button-up designed for warm days and easy layering.", 22),
+    ("p11", "Studio Straight-Leg Denim", "Clothes", 2499, 3199, 4.6, 91, "👖", "#dce5f3", "BEST FIT", "A versatile mid-rise denim with a comfortable straight leg and classic wash.", 19),
+    ("p12", "Cloudsoft Knit Cardigan", "Clothes", 2299, 2899, 4.9, 43, "🧥", "#eee4e8", "SOFT LAYERS", "A cosy, lightweight knit cardigan made for cool mornings and long evenings.", 14),
 ]
 
 
@@ -92,8 +96,7 @@ def init_db():
         user_columns = {row["Field"] for row in conn.execute("SHOW COLUMNS FROM users")}
         if "phone" not in user_columns:
             conn.execute("ALTER TABLE users ADD COLUMN phone VARCHAR(20) UNIQUE")
-        if conn.execute("SELECT COUNT(*) AS total FROM products").fetchone()["total"] == 0:
-            conn.executemany("INSERT INTO products (id,name,category,price,old_price,rating,reviews,emoji,color,badge,description,stock) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", SEED_PRODUCTS)
+        conn.executemany("INSERT IGNORE INTO products (id,name,category,price,old_price,rating,reviews,emoji,color,badge,description,stock) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", SEED_PRODUCTS)
         if not conn.execute("SELECT 1 FROM users WHERE email=?", ("admin@shopnest.demo",)).fetchone():
             salt = "shopnest-demo-admin-salt"
             password_hash = hashlib.scrypt(b"Admin123!", salt=salt.encode(), n=2**14, r=8, p=1).hex()
@@ -422,7 +425,7 @@ def add_product():
         price, old_price, stock = float(body.get("price")), float(body.get("oldPrice", body.get("price"))), int(body.get("stock"))
     except (ValueError, TypeError):
         return error("Check the product name, category, description, prices and stock.")
-    if not 3 <= len(name) <= 100 or not 10 <= len(description) <= 500 or category not in {"Electronics", "Accessories", "Home", "Fashion", "Beauty"} or not math.isfinite(price) or not math.isfinite(old_price) or not 1 <= price <= 1_000_000 or old_price < price or not 0 <= stock <= 10_000:
+    if not 3 <= len(name) <= 100 or not 10 <= len(description) <= 500 or category not in {"Electronics", "Accessories", "Home", "Fashion", "Clothes", "Beauty"} or not math.isfinite(price) or not math.isfinite(old_price) or not 1 <= price <= 1_000_000 or old_price < price or not 0 <= stock <= 10_000:
         return error("Check the product name, category, description, prices and stock.")
     emoji = str(body.get("emoji", "📦"))[:8]
     color = str(body.get("color", "#e9e7ff"))

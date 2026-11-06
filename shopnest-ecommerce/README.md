@@ -46,12 +46,14 @@ If the site reports a database connection error, make sure MySQL Server is runni
 ## Features
 
 - Responsive storefront with product search, working categories and product detail dialogs
+- Seeded catalog across electronics, home, accessories, beauty, shoes and clothes; clothing products include a dedicated **Clothes** filter
 - Working quick-add buttons, cart drawer, quantity controls and stock validation
 - Mobile number registration and OTP sign-in, with a five-minute code and five-attempt limit
 - Customer email/password sign-in remains available; admin demo login is listed below
 - Checkout with delivery address and cash on delivery
 - MySQL persistence for customers, products, OTP challenges and orders
 - Administrator dashboard with sales summary, inventory, order status updates and product creation
+- Admin product creation includes the Clothes category; starter clothing products are added to an existing database without overwriting edited products
 - Inventory locking and stock updates during checkout
 - Navigation menu, newsletter demo subscription and responsive layouts
 
