@@ -350,4 +350,5 @@ def static_files(filename):
 init_db()
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=int(os.environ.get("PORT", "3000")), debug=os.environ.get("FLASK_DEBUG") == "1")
+    # Listen on all interfaces so VS Code port forwarding / Dev Tunnels can reach Flask.
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "8082")), debug=os.environ.get("FLASK_DEBUG") == "1")

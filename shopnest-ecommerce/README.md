@@ -4,7 +4,7 @@ Shopnest is a full-stack, responsive e-commerce web app built with **Python, Fla
 
 ## Requirements
 
-- Python 3.10 or newer
+- Python 3.10 or newer. If `py --version` says **No installed Python found**, install Python from [python.org](https://www.python.org/downloads/) and enable **Add python.exe to PATH**, then restart VS Code.
 - VS Code (recommended)
 
 ## Run in VS Code on Windows
@@ -36,7 +36,21 @@ Shopnest is a full-stack, responsive e-commerce web app built with **Python, Fla
    python app.py
    ```
 
-6. Open **http://127.0.0.1:3000** in your browser. Stop the server with **Ctrl+C**.
+6. The server listens on port **8082**. Open **http://127.0.0.1:8082** locally. In VS Code, open the **Ports** panel and forward port `8082`; use the forwarded URL for a Dev Tunnel. Stop the server with **Ctrl+C**.
+
+If the browser shows **502 Bad Gateway**, first confirm the terminal still shows Flask running. The tunnel must forward port `8082`, and Python plus Flask must be installed. `python app.py` should print that it is listening on port `8082`.
+
+## Git push message: `src refspec main does not match any`
+
+This Git error is separate from running the website. It means your local repository does not have a branch named `main` (or has no commit on that branch). In the supplied screenshot, VS Code shows the current branch is `feature-monitor`. To push that current branch, commit your changes if needed, then run:
+
+```bash
+git add .
+git commit -m "Add Shopnest e-commerce project"
+git push -u origin feature-monitor
+```
+
+If the commit was already created, skip the first two commands and run only the `git push` command. You can check the current branch with `git branch --show-current`.
 
 ## Demo administrator
 
