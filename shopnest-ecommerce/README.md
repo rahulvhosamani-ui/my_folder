@@ -1,99 +1,87 @@
-# Shopnest — Python E-commerce Major Project
+# Shopnest — Python and MySQL E-commerce Major Project
 
-Shopnest is a full-stack, responsive e-commerce web app built with **Python, Flask, SQLite, HTML, CSS and JavaScript**. It is designed as a locally runnable college project. The storefront, API, accounts, inventory and orders run locally without paid services or an external database.
+Shopnest is a responsive full-stack e-commerce project built with Python, Flask, MySQL, HTML, CSS and JavaScript. It includes a customer storefront, mobile OTP demo sign-in, shopping cart, checkout, inventory and an administrator dashboard.
 
 ## Requirements
 
-- Python 3.10 or newer. If `py --version` says **No installed Python found**, install Python from [python.org](https://www.python.org/downloads/) and enable **Add python.exe to PATH**, then restart VS Code.
+- Python 3.10 or newer
+- MySQL Server 8 or newer, running on this computer
 - VS Code (recommended)
 
-## Run in VS Code on Windows
+## 1. Create the MySQL database
 
-1. Extract the ZIP, then open the extracted `shopnest-ecommerce` folder in VS Code.
-2. Open **Terminal → New Terminal**.
-3. Create and activate a virtual environment:
+Open MySQL Shell and connect to your local server. `roothost` is not the local hostname. Use your MySQL account name and the host `localhost`, for example:
 
-   ```powershell
-   py -m venv .venv
-   .\.venv\Scripts\Activate.ps1
-   ```
-
-   If PowerShell blocks activation, use Command Prompt in VS Code and run:
-
-   ```bat
-   .venv\Scripts\activate.bat
-   ```
-
-4. Install the Python package:
-
-   ```bash
-   python -m pip install -r requirements.txt
-   ```
-
-5. Start the app:
-
-   ```bash
-   python app.py
-   ```
-
-6. The server listens on port **8082**. Open **http://127.0.0.1:8082** locally. In VS Code, open the **Ports** panel and forward port `8082`; use the forwarded URL for a Dev Tunnel. Stop the server with **Ctrl+C**.
-
-If the browser shows **502 Bad Gateway**, first confirm the terminal still shows Flask running. The tunnel must forward port `8082`, and Python plus Flask must be installed. `python app.py` should print that it is listening on port `8082`.
-
-## Git push message: `src refspec main does not match any`
-
-This Git error is separate from running the website. It means your local repository does not have a branch named `main` (or has no commit on that branch). In the supplied screenshot, VS Code shows the current branch is `feature-monitor`. To push that current branch, commit your changes if needed, then run:
-
-```bash
-git add .
-git commit -m "Add Shopnest e-commerce project"
-git push -u origin feature-monitor
+```text
+\connect root@localhost
 ```
 
-If the commit was already created, skip the first two commands and run only the `git push` command. You can check the current branch with `git branch --show-current`.
+Enter the MySQL password when prompted. Then create the app database:
 
-## Demo administrator
+```sql
+CREATE DATABASE shopnest CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+The supplied `setup.sql` contains the same database creation statement. The app creates its tables and demo products automatically on first start.
+
+## 2. Start the Flask app from VS Code (Windows PowerShell)
+
+Open the extracted `shopnest-ecommerce` folder in VS Code, then open **Terminal → New Terminal**. Run:
+
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+$env:SHOPNEST_DB_HOST = "127.0.0.1"
+$env:SHOPNEST_DB_PORT = "3306"
+$env:SHOPNEST_DB_USER = "root"
+$env:SHOPNEST_DB_PASSWORD = Read-Host "MySQL password"
+$env:SHOPNEST_DB_NAME = "shopnest"
+.\.venv\Scripts\python.exe app.py
+```
+
+Then open **http://127.0.0.1:8082**. Keep the terminal open while using the site. Stop Flask with **Ctrl+C**. For a VS Code Dev Tunnel, forward port `8082` in the Ports panel.
+
+If the site reports a database connection error, make sure MySQL Server is running, the `shopnest` database exists, and the username/password environment variables match your MySQL login.
+
+## Features
+
+- Responsive storefront with product search, working categories and product detail dialogs
+- Working quick-add buttons, cart drawer, quantity controls and stock validation
+- Mobile number registration and OTP sign-in, with a five-minute code and five-attempt limit
+- Customer email/password sign-in remains available; admin demo login is listed below
+- Checkout with delivery address and cash on delivery
+- MySQL persistence for customers, products, OTP challenges and orders
+- Administrator dashboard with sales summary, inventory, order status updates and product creation
+- Inventory locking and stock updates during checkout
+- Navigation menu, newsletter demo subscription and responsive layouts
+
+## Demo administrator account
 
 - Email: `admin@shopnest.demo`
 - Password: `Admin123!`
 
-Sign in with this account to open the admin dashboard. You can inspect orders, update order status and add products. New customers can create accounts from the sign-in dialog.
+The seeded admin account uses email/password. For normal customers, create an account or sign in with a mobile OTP.
 
-## Features
+## OTP demo note
 
-- Responsive storefront with search, category filters, product ratings and sale prices
-- Shopping bag with quantity controls, stock checks and free-shipping progress
-- Customer registration and sign-in with salted `scrypt` password hashes
-- Checkout with delivery address and cash-on-delivery selection
-- Persistent SQLite database at `data/shopnest.db`, created automatically on first run
-- Admin dashboard with sales summary, order status changes and product creation
-- Inventory reduction after checkout and restoration if an order is cancelled
-- No payment gateway or external database needed for the local demonstration
+This college project does not connect to an SMS gateway. By default, the six-digit test code appears in the sign-in dialog and the Flask terminal, so the flow can be demonstrated locally. The code expires after five minutes and has five attempts. To hide the code in the page, set `SHOPNEST_DEMO_OTP=0`; connect an SMS provider before using OTP outside the demo.
 
 ## Project layout
 
 ```text
 shopnest-ecommerce/
-├── app.py                 # Flask app, REST API, authentication and SQLite data layer
-├── data/                  # SQLite database is created here on first run
+├── app.py                 # Flask API, account/OTP flow and MySQL data layer
 ├── public/
 │   ├── app.js             # Storefront interactions and API client
-│   ├── index.html         # Storefront and account/admin dialogs
+│   ├── index.html         # Storefront, sign-in, OTP, checkout and admin dialogs
 │   └── styles.css         # Responsive design
-├── requirements.txt       # Python dependencies
+├── requirements.txt       # Flask and MySQL Connector/Python
+├── setup.sql              # Creates the shopnest database
 └── README.md
 ```
 
-## Notes for a college presentation
+## Security and presentation notes
 
-This is an academic demonstration, not a production commerce deployment. The demo administrator password is public by design, and Flask's default signed-cookie session is used. Before real deployment, configure a private `SHOPNEST_SECRET`, use HTTPS and production hosting, add CSRF protection and rate limiting, and connect a real payment provider. The app can use a different database file by setting `SHOPNEST_DB`.
+This is a local academic demonstration, not a production deployment. The demo admin password is public by design, the OTP code is revealed in demo mode, and Flask's default signed-cookie sessions are used. For production, configure a private `SHOPNEST_SECRET`, add CSRF protection and rate limiting, use HTTPS and a production WSGI server, and integrate an SMS service and payment gateway.
 
-### Suggested viva topics
-
-- Flask routes and client/server architecture
-- Password hashing with `hashlib.scrypt` and signed cookie sessions
-- Product search and category filtering
-- Cart calculation, shipping rules and inventory validation
-- SQLite relational tables, foreign keys and transactions
-- Order lifecycle and admin role checks
-- How the local database can be hosted or extended
+Suggested viva topics: Flask routes, REST APIs, relational database design, password hashing with `scrypt`, OTP expiry and attempt limits, session authentication, inventory transactions, foreign keys, and admin role checks.
