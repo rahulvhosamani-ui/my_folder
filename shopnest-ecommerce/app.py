@@ -5,6 +5,7 @@ import os
 import re
 import secrets
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlparse
 
 from flask import Flask, g, jsonify, request, session, send_from_directory
 import mysql.connector
@@ -14,20 +15,7 @@ app = Flask(__name__, static_folder="public", static_url_path="")
 app.secret_key = os.environ.get("SHOPNEST_SECRET", "shopnest-college-demo-change-me")
 app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax", PERMANENT_SESSION_LIFETIME=60 * 60 * 24 * 7)
 
-SEED_PRODUCTS = [
-    ("p1", "Studio Wireless Headphones", "Electronics", 3499, 4499, 4.8, 128, "🎧", "#e6e8ff", "BESTSELLER", "Immersive sound, soft memory-foam ear cups and up to 30 hours of battery life.", 18),
-    ("p2", "Everyday Canvas Backpack", "Accessories", 1899, 2399, 4.6, 86, "🎒", "#f6e5d8", "POPULAR", "A thoughtful everyday carry with a padded laptop sleeve and water-resistant canvas.", 24),
-    ("p3", "Minimal Ceramic Table Lamp", "Home", 2299, 2799, 4.7, 54, "💡", "#f6eac8", "NEW", "Warm, gentle light in a sculptural ceramic design made for quiet evenings.", 12),
-    ("p4", "Active Move Smart Watch", "Electronics", 4299, 5499, 4.5, 203, "⌚", "#dceef0", "SALE", "Track your movement, sleep and heart rate with a bright, easy-to-read display.", 15),
-    ("p5", "Cloud Knit Everyday Sneakers", "Fashion", 2799, 3499, 4.9, 171, "👟", "#e7e3dc", "TOP RATED", "Lightweight knit sneakers with a cushioned sole for wherever the day takes you.", 20),
-    ("p6", "Botanical Skincare Set", "Beauty", 1599, 1999, 4.7, 92, "🧴", "#e3f0e3", "GENTLE CARE", "A simple three-step plant-based routine: cleanse, hydrate and restore.", 30),
-    ("p7", "Pour-Over Coffee Starter Kit", "Home", 1299, 1699, 4.6, 67, "☕", "#f1dfd1", "GIFT PICK", "Everything you need for a slow, delicious morning ritual, in one tidy kit.", 17),
-    ("p8", "Pocket Bluetooth Speaker", "Electronics", 1999, 2599, 4.4, 119, "🔊", "#e1e6f2", "COMPACT", "Big, clear sound in a pocket-friendly, splash-resistant little package.", 22),
-    ("p9", "Daylight Organic Cotton T-Shirt", "Clothes", 899, 1199, 4.8, 74, "👕", "#e7e8ef", "EVERYDAY FAVOURITE", "A soft, breathable organic cotton tee with an easy fit for everyday wear.", 36),
-    ("p10", "Weekend Linen Blend Shirt", "Clothes", 1699, 2199, 4.7, 58, "👔", "#e9e1d2", "WEEKEND EDIT", "A relaxed linen-blend button-up designed for warm days and easy layering.", 22),
-    ("p11", "Studio Straight-Leg Denim", "Clothes", 2499, 3199, 4.6, 91, "👖", "#dce5f3", "BEST FIT", "A versatile mid-rise denim with a comfortable straight leg and classic wash.", 19),
-    ("p12", "Cloudsoft Knit Cardigan", "Clothes", 2299, 2899, 4.9, 43, "🧥", "#eee4e8", "SOFT LAYERS", "A cosy, lightweight knit cardigan made for cool mornings and long evenings.", 14),
-]
+DEMO_PRODUCT_IDS = tuple(f"p{i}" for i in range(1, 13))
 
 
 class Database:
@@ -86,17 +74,26 @@ def init_db():
     with connect_db() as conn:
         schema = [
             "CREATE TABLE IF NOT EXISTS users (id VARCHAR(64) PRIMARY KEY, name VARCHAR(100) NOT NULL, email VARCHAR(254) NOT NULL UNIQUE, phone VARCHAR(20) UNIQUE, role VARCHAR(16) NOT NULL, salt VARCHAR(64) NOT NULL, password_hash CHAR(128) NOT NULL, created_at VARCHAR(40) NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
-            "CREATE TABLE IF NOT EXISTS products (id VARCHAR(64) PRIMARY KEY, name VARCHAR(150) NOT NULL, category VARCHAR(40) NOT NULL, price DECIMAL(12,2) NOT NULL, old_price DECIMAL(12,2) NOT NULL, rating DECIMAL(3,1) NOT NULL, reviews INT NOT NULL, emoji VARCHAR(16) NOT NULL, color CHAR(7) NOT NULL, badge VARCHAR(40) NOT NULL, description TEXT NOT NULL, stock INT NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+            "CREATE TABLE IF NOT EXISTS products (id VARCHAR(64) PRIMARY KEY, name VARCHAR(150) NOT NULL, brand VARCHAR(100) NOT NULL DEFAULT '', category VARCHAR(40) NOT NULL, price DECIMAL(12,2) NOT NULL, old_price DECIMAL(12,2) NOT NULL, rating DECIMAL(3,1) NOT NULL DEFAULT 0, reviews INT NOT NULL DEFAULT 0, emoji VARCHAR(16) NOT NULL DEFAULT '📦', color CHAR(7) NOT NULL DEFAULT '#e9e7ff', badge VARCHAR(40) NOT NULL DEFAULT 'PRODUCT', description TEXT NOT NULL, stock INT NOT NULL DEFAULT 0, image_url VARCHAR(1000) NOT NULL DEFAULT '', is_active TINYINT(1) NOT NULL DEFAULT 1, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
             "CREATE TABLE IF NOT EXISTS orders (id VARCHAR(32) PRIMARY KEY, user_id VARCHAR(64) NOT NULL, address VARCHAR(300) NOT NULL, subtotal DECIMAL(12,2) NOT NULL, shipping DECIMAL(12,2) NOT NULL, total DECIMAL(12,2) NOT NULL, status VARCHAR(20) NOT NULL, payment_method VARCHAR(40) NOT NULL, created_at VARCHAR(40) NOT NULL, FOREIGN KEY (user_id) REFERENCES users(id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
             "CREATE TABLE IF NOT EXISTS order_items (id BIGINT AUTO_INCREMENT PRIMARY KEY, order_id VARCHAR(32) NOT NULL, product_id VARCHAR(64) NOT NULL, name VARCHAR(150) NOT NULL, price DECIMAL(12,2) NOT NULL, quantity INT NOT NULL, emoji VARCHAR(16) NOT NULL, FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE, FOREIGN KEY (product_id) REFERENCES products(id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
             "CREATE TABLE IF NOT EXISTS otp_challenges (phone VARCHAR(20) PRIMARY KEY, code_hash CHAR(64) NOT NULL, expires_at VARCHAR(40) NOT NULL, attempts INT NOT NULL DEFAULT 0, name VARCHAR(100), email VARCHAR(254)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
         ]
         for statement in schema:
             conn.execute(statement)
+        product_columns = {row["Field"] for row in conn.execute("SHOW COLUMNS FROM products")}
+        if "brand" not in product_columns:
+            conn.execute("ALTER TABLE products ADD COLUMN brand VARCHAR(100) NOT NULL DEFAULT ''")
+        if "image_url" not in product_columns:
+            conn.execute("ALTER TABLE products ADD COLUMN image_url VARCHAR(1000) NOT NULL DEFAULT ''")
+        if "is_active" not in product_columns:
+            conn.execute("ALTER TABLE products ADD COLUMN is_active TINYINT(1) NOT NULL DEFAULT 1")
+        # Hide the previous demo catalog while preserving any order history that references it.
+        demo_placeholders = ",".join("?" for _ in DEMO_PRODUCT_IDS)
+        conn.execute(f"UPDATE products SET is_active=0 WHERE id IN ({demo_placeholders})", DEMO_PRODUCT_IDS)
         user_columns = {row["Field"] for row in conn.execute("SHOW COLUMNS FROM users")}
         if "phone" not in user_columns:
             conn.execute("ALTER TABLE users ADD COLUMN phone VARCHAR(20) UNIQUE")
-        conn.executemany("INSERT IGNORE INTO products (id,name,category,price,old_price,rating,reviews,emoji,color,badge,description,stock) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", SEED_PRODUCTS)
         if not conn.execute("SELECT 1 FROM users WHERE email=?", ("admin@shopnest.demo",)).fetchone():
             salt = "shopnest-demo-admin-salt"
             password_hash = hashlib.scrypt(b"Admin123!", salt=salt.encode(), n=2**14, r=8, p=1).hex()
@@ -133,6 +130,8 @@ def public_product(row):
     result["price"] = float(result["price"])
     result["oldPrice"] = float(result.pop("old_price"))
     result["rating"] = float(result["rating"])
+    result["imageUrl"] = result.pop("image_url", "")
+    result.pop("is_active", None)
     result.pop("created_at", None)
     return result
 
@@ -163,14 +162,14 @@ def index():
 def list_products():
     query = request.args.get("q", "").strip().lower()
     category = request.args.get("category", "All")
-    rows = get_db().execute("SELECT * FROM products ORDER BY created_at DESC, id").fetchall()
-    result = [public_product(row) for row in rows if (not query or query in f"{row['name']} {row['category']} {row['description']}".lower()) and (category == "All" or row["category"] == category)]
+    rows = get_db().execute("SELECT * FROM products WHERE is_active=1 ORDER BY created_at DESC, id").fetchall()
+    result = [public_product(row) for row in rows if (not query or query in f"{row['name']} {row['brand']} {row['category']} {row['description']}".lower()) and (category == "All" or row["category"] == category)]
     return jsonify(result)
 
 
 @app.get("/api/products/<product_id>")
 def get_product(product_id):
-    row = get_db().execute("SELECT * FROM products WHERE id=?", (product_id,)).fetchone()
+    row = get_db().execute("SELECT * FROM products WHERE id=? AND is_active=1", (product_id,)).fetchone()
     return (jsonify(public_product(row)) if row else error("Product not found.", 404))
 
 
@@ -390,7 +389,7 @@ def admin_summary():
     if not admin_required():
         return error("Admin access required.", 403)
     conn = get_db()
-    return jsonify(products=conn.execute("SELECT COUNT(*) AS total FROM products").fetchone()["total"], orders=conn.execute("SELECT COUNT(*) AS total FROM orders").fetchone()["total"], customers=conn.execute("SELECT COUNT(*) AS total FROM users WHERE role='customer'").fetchone()["total"], revenue=float(conn.execute("SELECT COALESCE(SUM(total),0) AS total FROM orders").fetchone()["total"]))
+    return jsonify(products=conn.execute("SELECT COUNT(*) AS total FROM products WHERE is_active=1").fetchone()["total"], orders=conn.execute("SELECT COUNT(*) AS total FROM orders").fetchone()["total"], customers=conn.execute("SELECT COUNT(*) AS total FROM users WHERE role='customer'").fetchone()["total"], revenue=float(conn.execute("SELECT COALESCE(SUM(total),0) AS total FROM orders").fetchone()["total"]))
 
 
 @app.get("/api/admin/orders")
@@ -420,22 +419,26 @@ def add_product():
         return error("Admin access required.", 403)
     body = request.get_json(silent=True) or {}
     try:
-        name, category = str(body.get("name", "")).strip(), str(body.get("category", ""))
+        name, brand, category = str(body.get("name", "")).strip(), str(body.get("brand", "")).strip(), str(body.get("category", ""))
         description = str(body.get("description", "")).strip()
         price, old_price, stock = float(body.get("price")), float(body.get("oldPrice", body.get("price"))), int(body.get("stock"))
     except (ValueError, TypeError):
         return error("Check the product name, category, description, prices and stock.")
-    if not 3 <= len(name) <= 100 or not 10 <= len(description) <= 500 or category not in {"Electronics", "Accessories", "Home", "Fashion", "Clothes", "Beauty"} or not math.isfinite(price) or not math.isfinite(old_price) or not 1 <= price <= 1_000_000 or old_price < price or not 0 <= stock <= 10_000:
+    if not 3 <= len(name) <= 100 or not 1 <= len(brand) <= 100 or not 10 <= len(description) <= 500 or category not in {"Electronics", "Accessories", "Home", "Fashion", "Clothes", "Beauty"} or not math.isfinite(price) or not math.isfinite(old_price) or not 1 <= price <= 1_000_000 or old_price < price or not 0 <= stock <= 10_000:
         return error("Check the product name, category, description, prices and stock.")
     emoji = str(body.get("emoji", "📦"))[:8]
     color = str(body.get("color", "#e9e7ff"))
+    image_url = str(body.get("imageUrl", "")).strip()
+    parsed_image_url = urlparse(image_url) if image_url else None
+    if image_url and (parsed_image_url.scheme not in {"http", "https"} or not parsed_image_url.netloc):
+        return error("Product image must be a complete http or https image URL.")
     if not re.fullmatch(r"#[0-9a-fA-F]{6}", color):
         color = "#e9e7ff"
     product_id = "p" + secrets.token_hex(12)
-    product = (product_id, name, category, round(price, 2), round(old_price, 2), 5, 0, emoji, color, "NEW", description, stock)
-    get_db().execute("INSERT INTO products (id,name,category,price,old_price,rating,reviews,emoji,color,badge,description,stock) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", product)
+    product = (product_id, name, brand, category, round(price, 2), round(old_price, 2), 0, 0, emoji, color, "PRODUCT", description, stock, image_url)
+    get_db().execute("INSERT INTO products (id,name,brand,category,price,old_price,rating,reviews,emoji,color,badge,description,stock,image_url) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", product)
     get_db().commit()
-    return jsonify(dict(zip(("id", "name", "category", "price", "oldPrice", "rating", "reviews", "emoji", "color", "badge", "description", "stock"), product))), 201
+    return jsonify(dict(zip(("id", "name", "brand", "category", "price", "oldPrice", "rating", "reviews", "emoji", "color", "badge", "description", "stock", "imageUrl"), product))), 201
 
 
 @app.patch("/api/admin/orders/<order_id>")

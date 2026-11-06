@@ -1,6 +1,6 @@
 # Shopnest — Python and MySQL E-commerce Major Project
 
-Shopnest is a responsive full-stack e-commerce project built with Python, Flask, MySQL, HTML, CSS and JavaScript. It includes a customer storefront, mobile OTP demo sign-in, shopping cart, checkout, inventory and an administrator dashboard.
+Shopnest is a responsive product catalogue built with Python, Flask, MySQL, HTML, CSS and JavaScript. Admins add the real products, brands, prices and image links they want to display. The public site has search and product details, with no cart or purchase flow.
 
 ## Requirements
 
@@ -22,7 +22,7 @@ Enter the MySQL password when prompted. Then create the app database:
 CREATE DATABASE shopnest CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-The supplied `setup.sql` contains the same database creation statement. The app creates its tables and demo products automatically on first start.
+The supplied `setup.sql` contains the same database creation statement. The app creates its tables automatically on first start. It does not add sample product listings.
 
 ## 2. Start the Flask app from VS Code (Windows PowerShell)
 
@@ -45,24 +45,23 @@ If the site reports a database connection error, make sure MySQL Server is runni
 
 ## Features
 
-- Responsive storefront with product search, working categories and product detail dialogs
-- Seeded catalog across electronics, home, accessories, beauty, shoes and clothes; clothing products include a dedicated **Clothes** filter
-- Working quick-add buttons, cart drawer, quantity controls and stock validation
+- Responsive catalogue with search by product name, brand, category or description
+- Working category filters, including a dedicated **Clothes** filter, and product detail dialogs
+- Mobile search expands from the magnifying glass button
+- Admin can add genuine products with brand, category, price, optional compare-at price, stock, description and direct photo URL
+- No demo product listings are seeded; older demo products with IDs `p1`–`p12` are hidden on startup
 - Mobile number registration and OTP sign-in, with a five-minute code and five-attempt limit
 - Customer email/password sign-in remains available; admin demo login is listed below
-- Checkout with delivery address and cash on delivery
-- MySQL persistence for customers, products, OTP challenges and orders
-- Administrator dashboard with sales summary, inventory, order status updates and product creation
-- Admin product creation includes the Clothes category; starter clothing products are added to an existing database without overwriting edited products
-- Inventory locking and stock updates during checkout
-- Navigation menu, newsletter demo subscription and responsive layouts
+- MySQL persistence for customers, product listings and OTP challenges
+- Administrator dashboard to add and review catalogue listings
+- Navigation menu and responsive layouts
 
 ## Demo administrator account
 
 - Email: `admin@shopnest.demo`
 - Password: `Admin123!`
 
-The seeded admin account uses email/password. For normal customers, create an account or sign in with a mobile OTP.
+The demo admin account uses email/password. Sign in, open the admin dashboard, select **Add a product**, then enter the product name, brand, category, real price and description. Paste a direct image URL if you want a product photo. Save it and the product appears in the catalogue. Search works against products you have added.
 
 ## OTP demo note
 
@@ -75,7 +74,7 @@ shopnest-ecommerce/
 ├── app.py                 # Flask API, account/OTP flow and MySQL data layer
 ├── public/
 │   ├── app.js             # Storefront interactions and API client
-│   ├── index.html         # Storefront, sign-in, OTP, checkout and admin dialogs
+│   ├── index.html         # Catalogue, sign-in, OTP and admin dialogs
 │   └── styles.css         # Responsive design
 ├── requirements.txt       # Flask and MySQL Connector/Python
 ├── setup.sql              # Creates the shopnest database
@@ -84,6 +83,6 @@ shopnest-ecommerce/
 
 ## Security and presentation notes
 
-This is a local academic demonstration, not a production deployment. The demo admin password is public by design, the OTP code is revealed in demo mode, and Flask's default signed-cookie sessions are used. For production, configure a private `SHOPNEST_SECRET`, add CSRF protection and rate limiting, use HTTPS and a production WSGI server, and integrate an SMS service and payment gateway.
+This is a local academic demonstration, not a production deployment. The demo admin password is public by design, the OTP code is revealed in demo mode, and Flask's default signed-cookie sessions are used. For production, configure a private `SHOPNEST_SECRET`, add CSRF protection and rate limiting, use HTTPS and a production WSGI server, and integrate an SMS service.
 
 Suggested viva topics: Flask routes, REST APIs, relational database design, password hashing with `scrypt`, OTP expiry and attempt limits, session authentication, inventory transactions, foreign keys, and admin role checks.
